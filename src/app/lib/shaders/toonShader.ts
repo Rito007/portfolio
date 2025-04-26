@@ -22,9 +22,18 @@ void main() {
     }
 
     // Definir a escala da partícula com base no tempo e no deslocamento
-    float scale = sin(offset * 5.0 + uTime * 2.0) * 3.0 + 10.0;
+    float scale;
+    float dist = length(uMouse.xy);
+    if(dist >= 0.3)
+    {
+      scale = sin(offset * 5.0 + uTime * 2.0) * 3.0 + 10.0;
+    }
+    else
+    {
+      scale = 5.0;
+    }
+    
 
-    // Atualizar a posição do vértice
     gl_Position = projectionMatrix * modelViewPosition;
     gl_PointSize = scale;
 }

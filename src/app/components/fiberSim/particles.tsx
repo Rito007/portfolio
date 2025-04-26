@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { vertexShader, fragmentShader } from '@/app/lib/shaders/toonShader';
+import { useThree } from '@react-three/fiber';
 
 export default function Particles({ count = 100, radius = 3 }) {
   const mesh = useRef<THREE.Points>(null);
@@ -11,26 +12,42 @@ export default function Particles({ count = 100, radius = 3 }) {
   const distances = useMemo(() => Array.from({ length: count }, () => radius + Math.random() * 0.5), [count]);
   const positions = useMemo(() => new Float32Array(count * 3), [count]);
   const [rotating, setRotating] = useState(true);
-  
+  const targets = useMemo(() => Array.from({ length: count }, () => new THREE.Vector3()), [count]);
+  const { camera, scene } = useThree();
+
   // Função que lida com o movimento do mouse
-  const onMouseMove = (event : any) => {
-    // Posição do mouse normalizada (-1 a 1)
-    const x = (event.clientX / window.innerWidth) * 2 - 1;
-    const y = -(event.clientY / window.innerHeight) * 2 + 1;
-    setMouse([x, y]);
+  const onMouseMove = (event: any) => {
     
+
+    let x = (event.clientX / window.innerWidth) * 2 - 1;
+    let y = -(event.clientY / window.innerHeight) * 2 + 1 + window.scrollY;
+    setMouse([x, y]);
   };
+
+  const onMouseScrool = (event:any)=>{
+    let x = (event.clientX / window.innerWidth) * 2 - 1;
+    let y = -(event.clientY / window.innerHeight) * 2 + 1;
+    if(window.scrollY >= 0 )
+    {
+      x = -40;
+      y=-40;
+    }
+    
+    
+    setMouse([x, y]);
+  }
+
 
   useEffect(() => {
     window.addEventListener('mousemove', onMouseMove);
-    return () => window.removeEventListener('mousemove', onMouseMove);
+    window.addEventListener('scroll', onMouseScrool);
+    setMouse([-20,-20]);
+    return () => {window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('scroll', onMouseScrool)};
   }, []);
 
-  // Verifica se a distância do mouse é menor que 0.7
   useEffect(() => {
-    console.log(mouse);
     const normalizado = new THREE.Vector2(mouse[0], mouse[1]).length();
-    setRotating(normalizado >= 0.7); // Se distância menor que 0.7, parar de rotacionar
+    setRotating((normalizado >= 0.7) && !rotating || (normalizado >= 0.3) && rotating);
   }, [mouse]);
 
   const material = useMemo(() => new THREE.ShaderMaterial({
@@ -47,32 +64,58 @@ export default function Particles({ count = 100, radius = 3 }) {
   useFrame((state) => {
     const time = state.clock.getElapsedTime();
     material.uniforms.uTime.value = time;
-    material.uniforms.uMouse.value.set(mouse[0], mouse[1]); // Atualiza o valor do uniforme do mouse
-    
-    if (rotating) {
-      for (let i = 0; i < count; i++) {
-        const angle = angles[i] + time * 0.5; // Velocidade de rotação
-        const distance = distances[i];
+    material.uniforms.uMouse.value.set(mouse[0], mouse[1]);
 
-        positions[i * 3 + 0] = Math.cos(angle) * distance;
-        positions[i * 3 + 1] = Math.sin(angle) * distance;
-        positions[i * 3 + 2] = 0;
+    // 1) Define o raycaster
+    const raycaster = new THREE.Raycaster();
+    const mouseVec = new THREE.Vector2(mouse[0], mouse[1]);
+    raycaster.setFromCamera(mouseVec, camera);
+
+    // 2) Interseção limpa com o plano z=0 (sem mutar direction)
+    const planeZ = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+    const intersection = new THREE.Vector3();
+    raycaster.ray.intersectPlane(planeZ, intersection);
+
+  
+    // 4) Lógica das partículas
+    for (let i = 0; i < count; i++) {
+      const angle = angles[i] + time * 0.5;
+      const distance = distances[i];
+
+      const idx = i * 3;
+      const currentPos = new THREE.Vector3(
+        positions[idx + 0],
+        positions[idx + 1],
+        positions[idx + 2]
+      );
+
+      // Decide o target: mouse ou ponto orbital
+      if (rotating) {
+        targets[i].set(
+          Math.cos(angle) * distance,
+          Math.sin(angle) * distance,
+          0
+        );
+      }  else {
+        const orbitalRadiusX = 0.01 + Math.random() * 0.5; // Raio X entre 0.5 e 1.0
+        const orbitalRadiusY = 0.01 + Math.random() * 0.5; // Raio Y entre 0.25 e 0.5
+        const speed = 0.1; // Velocidade entre 0.3 e 1.0
+        const localAngle = angle + time * speed;
+      
+        const x = Math.cos(localAngle) * orbitalRadiusX;
+        const y = Math.sin(localAngle) * orbitalRadiusY;
+        targets[i].set(intersection.x + x, intersection.y + y, 0);
       }
-    } else {
-      // Atração do mouse - move as partículas em direção ao mouse
-      for (let i = 0; i < count; i++) {
-        const particlePosition = new THREE.Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-        
-        // Calcular direção de atração
-        const directionToMouse = new THREE.Vector2(mouse[0], mouse[1]).sub(new THREE.Vector2(particlePosition.x, particlePosition.y)).normalize();
-        
-        // Mover as partículas em direção ao mouse
-        positions[i * 3] += directionToMouse.x * 0.05; // Multiplicar pela intensidade da atração
-        positions[i * 3 + 1] += directionToMouse.y * 0.05;
-      }
+      
+
+      // Transição suave
+      currentPos.lerp(targets[i], 0.1); // 0.1 é o fator de suavidade
+
+      positions[idx + 0] = currentPos.x;
+      positions[idx + 1] = currentPos.y;
+      positions[idx + 2] = 0;
     }
 
-    // Atualiza as posições das partículas
     if (mesh.current) {
       mesh.current.geometry.setAttribute(
         'position',

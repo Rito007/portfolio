@@ -4,7 +4,7 @@ import { Canvas } from '@react-three/fiber';
 import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 
-const Particles = dynamic(() => import('@/app/components/fiberSim/particles'), { ssr: false });
+const Particles = dynamic(() => import('@/app/components/fiberSim/particles'), { ssr:  false});
 
 interface HeroProps {
   heading: string;
@@ -13,7 +13,7 @@ interface HeroProps {
 
 export default function Hero(props: HeroProps) {
   return (
-    <div className="relative w-full h-screen bg-amber-100 overflow-hidden">
+    <section id="main" className="relative w-full h-screen bg-amber-100 overflow-hidden">
       <div className="absolute w-full z-10 flex flex-col justify-center items-center h-full gap-5">
       
         <div className="space-y-2 text-center">
@@ -39,8 +39,8 @@ export default function Hero(props: HeroProps) {
         </div>
 
         <div className="flex gap-2 mt-4">
-          <button className="rounded-md border-2 text-sm border-amber-900 py-2 px-4 bg-amber-900 text-white">Explore More</button>
-          <button className="rounded-md border-2 text-sm border-amber-900 py-2 px-4 bg-amber-900 text-white">Hire Me</button>
+          <button className="rounded-md border-2 cursor-pointer text-sm border-amber-900 py-2 px-4 bg-amber-900 text-white">Explore More</button>
+          <button className="rounded-md border-2 cursor-pointer text-sm border-amber-900 py-2 px-4 bg-amber-900 text-white"><a>Hire Me</a></button>
         </div>
       </div>
       <Canvas className="absolute top-0 left-0 w-full h-full z-0">
@@ -49,6 +49,6 @@ export default function Hero(props: HeroProps) {
           <Particles count={120} radius={3} />
         </Suspense>
       </Canvas>
-    </div>
+    </section>
   );
 }
