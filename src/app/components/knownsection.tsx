@@ -15,7 +15,7 @@ export default function KnowSection() {
                     },
                     {
                         title: "Back-end & APIs",
-                        desc: "Node.js, Express, MongoDB, and integration with REST or GraphQL APIs.",
+                        desc: "Node.js, Express, MongoDB, and integration with REST.",
                     },
                     {
                         title: "Desktop Apps & Bots",

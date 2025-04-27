@@ -4,7 +4,7 @@ import KnowSection from "./components/knownsection";
 import Carlos from "./components/ui/carlos";
 import AboutSection from "./components/ui/aboutsection";
 import ServicesSection from "./components/ui/servicessection";
-import Contact from "./components/ui/contact";
+import Contact from "./components/ui/contact/contact";
 export default function Home() {
   const links = [
     { label: 'Main', href: '#main' },
